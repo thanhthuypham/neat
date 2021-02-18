@@ -11,26 +11,26 @@ from sklearn.feature_extraction.text import CountVectorizer
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import io
+import base64
 
 app = Flask(__name__)
+
 
 @app.route("/")
 def index():
     search_term = request.args.get("search_term", "")
     if search_term:
-        output = "/fig.png"
+        output = "Top words in this domain are:"+ f"<br> <img src='data:image/png;base64,{domain_knowledge_explorer(search_term)}' alt='Top words'/>"
     else:
-        output = "/fig.png"
+        output = "Welcome!"
     return (
         """<form action="" method="get">
                 Domain knowledge: <input type="text" name="search_term">
                 <input type="submit" value="Exploring top words">
-            </form>"""
-        + "Top words: "
-        + """
-            <img src="/fig.png" atl="my image" width="1000" height "300">
-            </img> """
+            </form> <br> """
+        + output
     )
+
 
 ###Write function to query data by search terms:
 def query_book_data_batch(url):
@@ -85,7 +85,7 @@ def query_book_data(search_term, startIndex=0, maxResults=30):
     """
     url = "https://www.googleapis.com/books/v1/volumes?q="+str(search_term)+"&startIndex="+str(startIndex)+"&maxResults="+str(maxResults)+"&projection=lite&fields=items(volumeInfo)"
     df_output = pd.DataFrame(columns=['Title', 'Authors', 'Description', 'Date', 'Rating'])
-    for i in np.arange(0, 300, 30): 
+    for i in np.arange(0, 60, 30): 
         df_output = pd.concat([df_output, query_book_data_batch(url)], axis=0)
     return df_output
 
@@ -125,30 +125,31 @@ def domain_knowledge_explorer(search_term):
     
   
     #Plot
-    fig, ax = plt.subplots(figsize=(16,8))
+    fig = Figure(figsize=(12,4))
+    ax = fig.subplots()
     sns.set_style('whitegrid')
     max_count=top_words['count'].max()
     ax.plot(top_words[:50]['count']/50, marker='o', c='black')
     ax.text(40, (max_count +5)/50, "Count of most popular word: "+str(max_count), c = 'black', fontsize=13)
-    plt.xticks([])
-    plt.yticks([])
+    ax.set_xticks([])
+    ax.set_yticks([])
     
-  
     i=0
     for word in top_words[:50].index:
         ax.text(i, (top_words.loc[word]['count']+1)/50, word, rotation=45, c = (0.1, i/len(top_words), 0.5), fontsize=13)
         i = i+1
 
-    plt.xlabel('Most popular words', fontsize=14)
-    plt.ylabel('Scaled frequency', fontsize=14)
-    plt.title('Most popular terms in '+str(search_term)+' domain', fontsize=16)
+    ax.set_xlabel('Most popular words', fontsize=14)
+    ax.set_ylabel('Scaled frequency', fontsize=14)
+    ax.set_title('Most popular terms in '+str(search_term)+' domain', fontsize=16)
     
-    plt.savefig('fig.png')
+    # Save the chart to a temporary buffer.
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
 
-    output = io.BytesIO()
-    FigureCanvas(fig).print_png(output)
-
-    return Response(output.getvalue(), mimetype='image/png')
+    # Embed the result in the html output.
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    return data
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8080, debug=True)
