@@ -25,3 +25,4 @@ sklearn==0.0
 threadpoolctl==2.1.0
 urllib3==1.26.3
 Werkzeug==1.0.1
+google-python-cloud-debugger
