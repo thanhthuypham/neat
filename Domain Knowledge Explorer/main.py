@@ -13,20 +13,29 @@ from matplotlib.figure import Figure
 import io
 import base64
 
+try:
+  import googleclouddebugger
+  googleclouddebugger.enable(
+    breakpoint_enable_canary=True
+  )
+except ImportError:
+  pass
+
+
 app = Flask(__name__)
 
-
+### Display the results on web app
 @app.route("/")
 def index():
     search_term = request.args.get("search_term", "")
     if search_term:
-        output = "Top words in this domain are:"+ f"<br> <img src='data:image/png;base64,{domain_knowledge_explorer(search_term)}' alt='Top words'/>"
+        output = "The most popular words in this domain are:"+ f"<br> <img src='data:image/png;base64,{domain_knowledge_explorer(search_term)}' alt='Top words' width='1000' height='500'/>"
     else:
         output = "Welcome!"
     return (
         """<form action="" method="get">
-                Domain knowledge: <input type="text" name="search_term">
-                <input type="submit" value="Exploring top words">
+                Domain knowledge that you want to explore: <input type="text" name="search_term">
+                <input type="submit" value="Explore">
             </form> <br> """
         + output
     )
@@ -83,9 +92,9 @@ def query_book_data(search_term, startIndex=0, maxResults=30):
     Returns: 
     Data Frame with 5 colums: Title, Authors, Description, Year, Avg Rating 
     """
-    url = "https://www.googleapis.com/books/v1/volumes?q="+str(search_term)+"&startIndex="+str(startIndex)+"&maxResults="+str(maxResults)+"&projection=lite&fields=items(volumeInfo)"
     df_output = pd.DataFrame(columns=['Title', 'Authors', 'Description', 'Date', 'Rating'])
-    for i in np.arange(0, 60, 30): 
+    for sindex in np.arange(0, 300, 30): 
+        url = "https://www.googleapis.com/books/v1/volumes?q="+str(search_term)+"&startIndex="+str(sindex)+"&maxResults="+str(maxResults)+"&projection=lite&fields=items(volumeInfo)"
         df_output = pd.concat([df_output, query_book_data_batch(url)], axis=0)
     return df_output
 
@@ -125,18 +134,18 @@ def domain_knowledge_explorer(search_term):
     
   
     #Plot
-    fig = Figure(figsize=(12,4))
+    fig = Figure(figsize=(12,6))
     ax = fig.subplots()
     sns.set_style('whitegrid')
     max_count=top_words['count'].max()
     ax.plot(top_words[:50]['count']/50, marker='o', c='black')
-    ax.text(40, (max_count +5)/50, "Count of most popular word: "+str(max_count), c = 'black', fontsize=13)
+    ax.text(20, (max_count +10)/50, "Count of most popular word: "+str(max_count), c = 'black', fontsize=12)
     ax.set_xticks([])
     ax.set_yticks([])
     
     i=0
     for word in top_words[:50].index:
-        ax.text(i, (top_words.loc[word]['count']+1)/50, word, rotation=45, c = (0.1, i/len(top_words), 0.5), fontsize=13)
+        ax.text(i, (top_words.loc[word]['count']+1)/50, word, rotation=45, c = (0.1, i/len(top_words), 0.5), fontsize=12)
         i = i+1
 
     ax.set_xlabel('Most popular words', fontsize=14)
@@ -151,5 +160,6 @@ def domain_knowledge_explorer(search_term):
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     return data
 
+###Run the app
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8080, debug=True)
