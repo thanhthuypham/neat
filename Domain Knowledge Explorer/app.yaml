@@ -1,7 +1,3 @@
 runtime: python38
 
 instance_class: F4_HIGHMEM
-
-#url: /favicon\.ico
-#  static_files: static/images/favicon.ico
-#  upload: static/images/favicon\.ico

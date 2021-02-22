@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask import request
 from flask import Response
 
@@ -8,7 +8,6 @@ import requests
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.feature_extraction.text import CountVectorizer
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import io
 import base64
@@ -23,23 +22,6 @@ except ImportError:
 
 
 app = Flask(__name__)
-
-### Display the results on web app
-@app.route("/")
-def index():
-    search_term = request.args.get("search_term", "")
-    if search_term:
-        output = "The most popular words in this domain are:"+ f"<br> <img src='data:image/png;base64,{domain_knowledge_explorer(search_term)}' alt='Top words' width='1000' height='500'/>"
-    else:
-        output = "Welcome!"
-    return (
-        """<form action="" method="get">
-                Domain knowledge that you want to explore: <input type="text" name="search_term">
-                <input type="submit" value="Explore">
-            </form> <br> """
-        + output
-    )
-
 
 ###Write function to query data by search terms:
 def query_book_data_batch(url):
@@ -130,7 +112,8 @@ def domain_knowledge_explorer(search_term):
     
     #Create dataframe of most popular phrases:
     all_words_df = pd.concat([words_df_mono, words_df], axis = 1)
-    top_words = pd.DataFrame(all_words_df.sum(axis=0).sort_values(ascending = False), columns = ['count'])
+    top_words_predrop = pd.DataFrame(all_words_df.sum(axis=0).sort_values(ascending = False), columns = ['count'])
+    top_words = top_words_predrop.drop(top_words_predrop.index[2:7], axis=0)
     
   
     #Plot
@@ -139,18 +122,18 @@ def domain_knowledge_explorer(search_term):
     sns.set_style('whitegrid')
     max_count=top_words['count'].max()
     ax.plot(top_words[:50]['count']/50, marker='o', c='black')
-    ax.text(20, (max_count +10)/50, "Count of most popular word: "+str(max_count), c = 'black', fontsize=12)
+    ax.text(18, (max_count + 2)/50, "Count of most popular word/ phrase: "+str(max_count), c = 'black', fontsize=10)
     ax.set_xticks([])
     ax.set_yticks([])
     
     i=0
     for word in top_words[:50].index:
-        ax.text(i, (top_words.loc[word]['count']+1)/50, word, rotation=45, c = (0.1, i/len(top_words), 0.5), fontsize=12)
+        ax.text(i, (top_words.loc[word]['count']+5)/50, word, rotation=45, c = (0.1, i/len(top_words), 0.5), fontsize=10)
         i = i+1
 
-    ax.set_xlabel('Most popular words', fontsize=14)
-    ax.set_ylabel('Scaled frequency', fontsize=14)
-    ax.set_title('Most popular terms in '+str(search_term)+' domain', fontsize=16)
+    ax.set_xlabel('Most popular words/ phrases', fontsize=12)
+    ax.set_ylabel('Scaled frequency', fontsize=12)
+    ax.set_title('Most popular words/ phrases in '+str(search_term)+' domain', fontsize=14)
     
     # Save the chart to a temporary buffer.
     buf = io.BytesIO()
@@ -159,6 +142,17 @@ def domain_knowledge_explorer(search_term):
     # Embed the result in the html output.
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     return data
+
+
+### Display the results on web app
+data = 'String'
+@app.route("/")
+def index():
+    search_term = request.args.get("search_term", "")
+    if search_term: 
+        global data
+        data = domain_knowledge_explorer(search_term)
+    return render_template('index.html', search_term=search_term, data=data)
 
 ###Run the app
 if __name__ == "__main__":
