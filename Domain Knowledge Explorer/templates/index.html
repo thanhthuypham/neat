@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domain Knowledge Explorer</title>
+<link href="https://fonts.googleapis.com/css?family=Roboto" rel="preload" as="font">
+<link href="/static/style.css" rel="stylesheet" type="text/css" />
+<link rel="icon" href="data:,">
+</head>
+
+<body>
+	<div class="container">
+		<div class="hero">
+            <form action="" method="get">
+                Domain knowledge: <input type="text" name="search_term">
+                <input type="submit" value="Explore">
+            </form>
+			{% if search_term %}
+			<div class="message"></div>
+				<p> Most popular phrases in this domain: </p>
+			<br> </br>
+			<picture>
+				<img src="data:image/png;base64,{{data}}" alt="Domain knowledge explorers" width="1000" height="500">
+			</picture>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+</body>
+</html>
